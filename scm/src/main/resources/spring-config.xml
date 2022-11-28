@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:aop="http://www.springframework.org/schema/aop"
+       xmlns:tx="http://www.springframework.org/schema/tx"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+        http://www.springframework.org/schema/beans/spring-beans.xsd
+        http://www.springframework.org/schema/tx
+        http://www.springframework.org/schema/tx/spring-tx.xsd
+        http://www.springframework.org/schema/context
+        http://www.springframework.org/schema/context/spring-context.xsd
+        http://www.springframework.org/schema/aop
+        http://www.springframework.org/schema/aop/spring-aop.xsd">
+
+    <!-- 自动扫描，将类自动注册为bean,@Controller注解在spring mvc中扫描 -->
+    <context:component-scan base-package="org.example">
+        <context:exclude-filter type="annotation" expression="org.springframework.stereotype.Controller"/>
+    </context:component-scan>
+
+    <!--加载jdbc.properties配置文件 -->
+    <context:property-placeholder location="classpath:jdbc.properties" ignore-unresolvable="true"/>
+    <!-- 配置数据源-->
+    <bean id="dataSource" class="org.springframework.jdbc.datasource.DriverManagerDataSource">
+        <property name="driverClassName" value="${jdbc.driver}"/>
+        <property name="url" value="${jdbc.url}"/>
+        <property name="username" value="${jdbc.username}"/>
+        <property name="password" value="${jdbc.password}"/>
+    </bean>
+
+    <!-- 整合mybatis-->
+    <bean id="sqlSessionFactory" class="org.mybatis.spring.SqlSessionFactoryBean">
+        <!--别名-->
+        <property name="typeAliasesPackage" value="org.example.pojo"/>
+        <!-- 数据源-->
+        <property name="dataSource" ref="dataSource"/>
+        <!--mapper.xml的路径-->
+        <property name="mapperLocations" value="classpath:org/example/dao/*.xml"/>
+    </bean>
+
+    <!-- 事务配置（spring接管mybatis事务操作，如事务的提交/回滚/关闭等）-->
+    <bean id="txManager" class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+        <property name="dataSource" ref="dataSource"/>
+    </bean>
+
+    <tx:advice id="txAdvice" transaction-manager="txManager">
+        <tx:attributes>
+            <tx:method name="add*" isolation="REPEATABLE_READ" rollback-for="Exception"/>
+            <tx:method name="update*" isolation="REPEATABLE_READ" rollback-for="Exception"/>
+            <tx:method name="delete*" isolation="REPEATABLE_READ" rollback-for="Exception"/>
+            <tx:method name="get*" isolation="REPEATABLE_READ" read-only="true"/>
+            <tx:method name="*" isolation="REPEATABLE_READ" propagation="NOT_SUPPORTED"/>
+        </tx:attributes>
+    </tx:advice>
+
+    <!-- 事务的切入点 -->
+    <aop:config>
+        <aop:pointcut id="point" expression="execution(* org.example.service..*(..))"/>
+        <aop:advisor advice-ref="txAdvice" pointcut-ref="point"/>
+    </aop:config>
+
+    <!-- 配置mybatis批量扫描-->
+    <!-- 从basePackage指定的mapper(dao)包中扫描mapper类，自动生成bean-->
+    <bean class="org.mybatis.spring.mapper.MapperScannerConfigurer">
+        <property name="basePackage" value="org.example.dao"/>
+    </bean>
+</beans>
