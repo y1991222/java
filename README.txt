@@ -5,4 +5,4 @@
 
 每个项目介绍：
 scm:
-	SpringMVC + mybatis
+	SpringMVC + mybatis  前后端不分离，前端easyui + jsp，也可提供restful接口返回json格式
